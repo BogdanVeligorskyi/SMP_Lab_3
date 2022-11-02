@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>База даних "Книги"</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" 
+    rel="stylesheet" />
+</head>
+<body>
+    <h2 style="padding-left: 15px">Додати нову книгу</h2>
+    <form name="bookForm">
+        <input type="hidden" name="id" value="0" />
+        <div class="form-group">
+            <label style="padding-left: 15px" 
+            for="name">Назва:</label>
+            <input class="form-control" name="name" />
+        </div>
+        <div class="form-group">
+            <label style="padding-left: 15px" 
+            for="author">Автор:</label>
+            <input class="form-control" name="author" />
+        </div>
+        <div class="form-group">
+            <label style="padding-left: 15px" 
+            for="genre">Жанр:</label>
+            <input class="form-control" name="genre" />
+        </div>
+        <div class="form-group">
+            <label style="padding-left: 15px" 
+            for="pages">Кількість сторінок:</label>
+            <input class="form-control" name="pages" />
+        </div>
+
+
+        <div class="panel-body">
+            <button type="submit" 
+            class="btn btn-sm btn-warning">Зберегти</button>
+            <a id="reset" class="btn btn-sm btn-warning">Скинути</a>
+        </div>
+    </form>
+    <table class="table table-condensed table-striped table-bordered">
+        <thead><tr><th>Id</th><th>Назва</th><th>Автор</th>
+            <th>Жанр</th><th>Кількість сторінок</th><th>
+                
+            </th></tr></thead>
+        <tbody>
+        </tbody>
+    </table>
+   
+    <script>
+        // отримати перелік усіх книг
+        async function GetBooks() {
+            // запит і відповідь на нього
+            const response = await fetch("/api/books", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true) {
+                const books = await response.json();
+                let rows = document.querySelector("tbody"); 
+                books.forEach(book => {
+                    rows.append(row(book));
+                });
+            }
+        }
+        // отримати тільки одну книгу
+        async function GetBook(id) {
+            const response = await fetch("/api/books/" + id, {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true) {
+                const book = await response.json();
+                const form = document.forms["bookForm"];
+                form.elements["id"].value = book._id;
+                form.elements["name"].value = book.name;
+                form.elements["author"].value = book.author;
+                form.elements["genre"].value = book.genre;
+                form.elements["pages"].value = book.pages;
+            }
+        }
+        // додавання книги у базу даних
+        async function CreateBook(bookName, bookAuthor, 
+            bookGenre, bookPages) {
+  
+            const response = await fetch("api/books", {
+                method: "POST",
+                headers: { "Accept": "application/json", 
+                "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: bookName,
+                    author: bookAuthor,
+                    genre: bookGenre,
+                    pages: parseInt(bookPages, 10)
+                })
+            });
+            if (response.ok === true) {
+                const book = await response.json();
+                reset();
+                document.querySelector("tbody").append(row(book));
+            }
+        }
+        // зміна інформації про книгу
+        async function EditBook(bookId, bookName, bookAuthor, 
+            bookGenre, bookPages) {
+            const response = await fetch("api/books", {
+                method: "PUT",
+                headers: { "Accept": "application/json", 
+                "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: bookId,
+                    name: bookName,
+                    author: bookAuthor,
+                    genre: bookGenre,
+                    pages: parseInt(bookPages, 10)
+                })
+            });
+            if (response.ok === true) {
+                const book = await response.json();
+                reset();
+                document.querySelector
+                ("tr[data-rowid='" + book._id + "']")
+                .replaceWith(row(book));
+            }
+        }
+        // вилучення книги з бази даних
+        async function DeleteBook(id) {
+            const response = await fetch("/api/books/" + id, {
+                method: "DELETE",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok === true) {
+                const book = await response.json();
+                document.querySelector
+                ("tr[data-rowid='" + book._id + "']")
+                .remove();
+            }
+        }
+  
+        // скидання інформації форми
+        function reset() {
+            const form = document.forms["bookForm"];
+            form.reset();
+            form.elements["id"].value = 0;
+        }
+        // створення рядка для таблиці
+        function row(book) {
+  
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-rowid", book._id);
+  
+            const idTd = document.createElement("td");
+            idTd.append(book._id);
+            tr.append(idTd);
+  
+            const nameTd = document.createElement("td");
+            nameTd.append(book.name);
+            tr.append(nameTd);
+  
+            const authorTd = document.createElement("td");
+            authorTd.append(book.author);
+            tr.append(authorTd);
+
+            const genreTd = document.createElement("td");
+            genreTd.append(book.genre);
+            tr.append(genreTd);
+
+            const pagesTd = document.createElement("td");
+            pagesTd.append(book.pages);
+            tr.append(pagesTd);            
+              
+            const linksTd = document.createElement("td");
+  
+            const editLink = document.createElement("a");
+            editLink.setAttribute("data-id", book._id);
+            editLink.setAttribute("style", 
+                "cursor:pointer;padding:15px;");
+            editLink.append("Змінити");
+            editLink.addEventListener("click", e => {
+  
+                e.preventDefault();
+                GetBook(book._id);
+            });
+            linksTd.append(editLink);
+  
+            const removeLink = document.createElement("a");
+            removeLink.setAttribute("data-id", book._id);
+            removeLink.setAttribute("style", 
+                "cursor:pointer;padding:15px;");
+            removeLink.append("Вилучити");
+            removeLink.addEventListener("click", e => {
+  
+                e.preventDefault();
+                DeleteBook(book._id);
+            });
+  
+            linksTd.append(removeLink);
+            tr.appendChild(linksTd);
+  
+            return tr;
+        }
+        // скидання значень форми
+        document.getElementById("reset").click(function (e) {
+  
+            e.preventDefault();
+            reset();
+        })
+  
+        // відправлення форми
+        document.forms["bookForm"].addEventListener("submit", e => {
+            e.preventDefault();
+            const form = document.forms["bookForm"];
+            const id = form.elements["id"].value;
+            const name = form.elements["name"].value;
+            const author = form.elements["author"].value;
+            const genre = form.elements["genre"].value;
+            const pages = form.elements["pages"].value;
+
+            if (id == 0)
+                CreateBook(name, author, genre, pages);
+            else
+                EditBook(id, name, author, genre, pages);
+        });
+  
+        // завантаження всіх книг
+        GetBooks();
+    </script>
+</body>
+</html>
